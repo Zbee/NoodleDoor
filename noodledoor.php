@@ -1,9 +1,9 @@
 <? 
 $pass = hash("sha256", "cake");
 $sqlinfo = [
-  "host" => "ftp.zekesonxx.com",
-  "username" => "qafbuevv_zbee",
-  "password" => "VO46kQSfLc7w"
+  "host" => "",
+  "username" => "",
+  "password" => ""
 ];
 
 /*
