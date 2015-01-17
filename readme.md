@@ -21,7 +21,6 @@ A backdoor-like php application that can be uploaded to your website and help yo
   - Empty tables
   - Edit databases
   - Drop databases
-  - Download databases
   - Download tables
   - Execute SQL
 - Overall
